@@ -1,0 +1,16 @@
+{
+  "name": "qui-et-pourquoi",
+  "version": "1.0.0",
+  "description": "Party game multijoueur sur navigateur : qui est le plus... ?",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.3.0",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.4"
+  }
+}
