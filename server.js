@@ -1,3 +1,4 @@
+const os = require("os");
 const path = require("path");
 const http = require("http");
 const express = require("express");
@@ -61,14 +62,48 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
+// Interfaces virtuelles à ignorer (WSL, Hyper-V, Docker, VM) : leurs IP ne sont
+// pas joignables depuis un téléphone
+const VIRTUAL_INTERFACE_PATTERN = /vethernet|wsl|hyper-v|docker|vmware|virtualbox|vbox|veth|br-/i;
+
+// IP de la machine sur le réseau local. Parmi les interfaces réelles,
+// on préfère 192.168.x.x s'il y en a une.
+function findLocalNetworkIp() {
+  const candidates = [];
+  for (const [interfaceName, addresses] of Object.entries(os.networkInterfaces())) {
+    if (VIRTUAL_INTERFACE_PATTERN.test(interfaceName)) continue;
+    for (const address of addresses) {
+      if (address.family === "IPv4" && !address.internal) {
+        candidates.push(address.address);
+      }
+    }
+  }
+  const homeNetworkIp = candidates.find((ip) => ip.startsWith("192.168."));
+  return homeNetworkIp || candidates[0] || null;
+}
+
+function isLoopbackHostname(hostname) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
 // QR code d'une salle : il encode l'adresse du site suivie de ?code=XXXX
+// Si le jeu est ouvert via localhost, on met l'IP de la machine à la place,
+// sinon les téléphones tenteraient de se connecter à eux-mêmes.
 app.get("/qr/:code", async (req, res) => {
   const code = req.params.code.toUpperCase();
   if (!rooms.has(code)) {
     return res.status(404).end();
   }
 
-  const joinUrl = `${req.protocol}://${req.get("host")}/?code=${code}`;
+  const siteUrl = new URL(`${req.protocol}://${req.get("host")}`);
+  if (isLoopbackHostname(siteUrl.hostname)) {
+    const localIp = findLocalNetworkIp();
+    if (localIp) {
+      siteUrl.hostname = localIp;
+    }
+  }
+
+  const joinUrl = `${siteUrl.origin}/?code=${code}`;
   const svg = await QRCode.toString(joinUrl, { type: "svg", margin: 2 });
   res.type("image/svg+xml").send(svg);
 });
