@@ -1,22 +1,52 @@
 [
-  "Qui est le plus fort ?",
-  "Qui serait le premier à mourir dans un film d'horreur ?",
-  "Qui est le plus susceptible de gagner au loto et de tout dépenser en une semaine ?",
-  "Qui est le plus radin ?",
-  "Qui est le plus en retard en général ?",
-  "Qui ferait le meilleur président ?",
-  "Qui s'endort le plus vite en soirée ?",
-  "Qui a le pire sens de l'orientation ?",
-  "Qui survivrait le plus longtemps sur une île déserte ?",
-  "Qui est le plus susceptible de finir célèbre ?",
-  "Qui raconte les pires blagues ?",
-  "Qui est le plus mauvais conducteur ?",
-  "Qui mange le plus ?",
-  "Qui est le plus susceptible de pleurer devant un dessin animé ?",
-  "Qui a le plus de chances de se perdre dans son propre quartier ?",
-  "Qui est le plus bordélique ?",
-  "Qui serait le meilleur espion ?",
-  "Qui est le plus susceptible de partir vivre à l'étranger sur un coup de tête ?",
-  "Qui est le plus mauvais perdant ?",
-  "Qui est le plus susceptible de répondre au téléphone à 3h du matin ?"
+  {
+    "id": "aventure",
+    "name": "Aventure et survie",
+    "questions": [
+      "Qui est le plus fort ?",
+      "Qui serait le premier à mourir dans un film d'horreur ?",
+      "Qui survivrait le plus longtemps sur une île déserte ?",
+      "Qui serait le meilleur espion ?"
+    ]
+  },
+  {
+    "id": "argent",
+    "name": "Argent",
+    "questions": [
+      "Qui est le plus susceptible de gagner au loto et de tout dépenser en une semaine ?",
+      "Qui est le plus radin ?"
+    ]
+  },
+  {
+    "id": "quotidien",
+    "name": "Vie de tous les jours",
+    "questions": [
+      "Qui est le plus en retard en général ?",
+      "Qui s'endort le plus vite en soirée ?",
+      "Qui a le pire sens de l'orientation ?",
+      "Qui est le plus mauvais conducteur ?",
+      "Qui mange le plus ?",
+      "Qui a le plus de chances de se perdre dans son propre quartier ?",
+      "Qui est le plus bordélique ?",
+      "Qui est le plus susceptible de répondre au téléphone à 3h du matin ?"
+    ]
+  },
+  {
+    "id": "caractere",
+    "name": "Caractère",
+    "questions": [
+      "Qui raconte les pires blagues ?",
+      "Qui est le plus susceptible de pleurer devant un dessin animé ?",
+      "Qui est le plus mauvais perdant ?"
+    ]
+  },
+  {
+    "id": "avenir",
+    "name": "Avenir et ambitions",
+    "questions": [
+      "Qui ferait le meilleur président ?",
+      "Qui est le plus susceptible de finir célèbre ?",
+      "Qui est le plus susceptible de partir vivre à l'étranger sur un coup de tête ?"
+    ]
+  }
 ]

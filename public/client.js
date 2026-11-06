@@ -93,17 +93,42 @@ function renderLobby() {
     .join("");
 
   const connectedCount = state.players.filter((player) => player.connected).length;
-  const canStart = isHost() && connectedCount >= state.minPlayers;
+  const enabledQuestionCount = state.categories
+    .filter((category) => category.enabled)
+    .reduce((total, category) => total + category.questionCount, 0);
+  const enoughPlayers = connectedCount >= state.minPlayers;
+  const hasQuestions = enabledQuestionCount > 0;
+  const canStart = isHost() && enoughPlayers && hasQuestions;
 
   let footer = "";
   if (isHost()) {
     footer = `<button id="start" ${canStart ? "" : "disabled"}>Lancer la partie</button>`;
-    if (!canStart) {
+    if (!enoughPlayers) {
       footer += `<p class="discret">Il faut au moins ${state.minPlayers} joueurs.</p>`;
+    } else if (!hasQuestions) {
+      footer += `<p class="discret">Active au moins une catégorie de questions.</p>`;
     }
   } else {
     footer = `<p class="discret">En attente de l'hôte...</p>`;
   }
+
+  // Les catégories de questions : l'hôte les active ou non en touchant la ligne
+  const categoryLines = state.categories
+    .map((category) => {
+      const label = `${escapeHtml(category.name)} <span class="badge">${category.questionCount}</span>`;
+      const stateText = category.enabled ? "activée" : "désactivée";
+      if (!isHost()) {
+        return `<li class="ligne ${category.enabled ? "" : "hors-ligne"}"><span>${label}</span><span class="badge">${stateText}</span></li>`;
+      }
+      return `
+      <li>
+        <button class="categorie ${category.enabled ? "choisi" : "secondaire"}" data-id="${category.id}">
+          <span>${label}</span>
+          <span>${category.enabled ? "oui" : "non"}</span>
+        </button>
+      </li>`;
+    })
+    .join("");
 
   // Les noms hors joueurs : l'hôte peut en ajouter ou en retirer, les autres les voient
   const extraLines = state.extraNames
@@ -139,6 +164,11 @@ function renderLobby() {
       <ul class="liste">${playerLines}</ul>
     </div>
     <div class="carte">
+      <h3>Catégories de questions</h3>
+      <ul class="liste">${categoryLines}</ul>
+      <p class="discret">${enabledQuestionCount} questions disponibles, ${state.maxRounds} maximum par partie.</p>
+    </div>
+    <div class="carte">
       <h3>Autres noms proposés en réponse</h3>
       <p class="discret">Ils ne votent pas, mais on peut voter pour eux.</p>
       ${extraLines ? `<ul class="liste">${extraLines}</ul>` : ""}
@@ -171,6 +201,10 @@ function renderLobby() {
     extraInput.onkeydown = (event) => {
       if (event.key === "Enter") addExtraName();
     };
+  }
+
+  for (const button of app.querySelectorAll("button.categorie")) {
+    button.onclick = () => socket.emit("category:toggle", { id: button.dataset.id });
   }
 
   for (const button of app.querySelectorAll("button.retirer")) {

@@ -181,6 +181,24 @@ button.secondaire {
   color: var(--succes);
 }
 
+button.categorie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  font-weight: normal;
+}
+
+button.categorie.choisi {
+  background: var(--accent);
+  color: var(--accent-texte);
+}
+
+button.categorie .badge {
+  color: inherit;
+  opacity: 0.7;
+}
+
 button.choix {
   background: var(--carte-claire);
   color: var(--texte);

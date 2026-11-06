@@ -3,7 +3,50 @@ const http = require("http");
 const express = require("express");
 const { Server } = require("socket.io");
 const QRCode = require("qrcode");
-const allQuestions = require("./questions.json");
+const allCategories = require("./questions.json");
+
+// Vérifie questions.json au démarrage et liste tous les problèmes d'un coup
+function checkCategories(categories) {
+  const problems = [];
+
+  if (!Array.isArray(categories) || categories.length === 0) {
+    throw new Error("questions.json doit contenir au moins une catégorie.");
+  }
+
+  const idsAlreadySeen = new Set();
+  categories.forEach((category, index) => {
+    const position = `Catégorie n°${index + 1}`;
+
+    if (typeof category.id !== "string" || category.id.trim() === "") {
+      problems.push(`${position} : "id" manquant.`);
+    } else if (idsAlreadySeen.has(category.id)) {
+      problems.push(`${position} : l'id "${category.id}" est utilisé plusieurs fois.`);
+    } else {
+      idsAlreadySeen.add(category.id);
+    }
+
+    if (typeof category.name !== "string" || category.name.trim() === "") {
+      problems.push(`${position} : "name" manquant.`);
+    }
+
+    if (!Array.isArray(category.questions) || category.questions.length === 0) {
+      problems.push(`${position} : "questions" doit contenir au moins une question.`);
+    } else {
+      const hasInvalidQuestion = category.questions.some(
+        (question) => typeof question !== "string" || question.trim() === ""
+      );
+      if (hasInvalidQuestion) {
+        problems.push(`${position} : une question est vide ou n'est pas du texte.`);
+      }
+    }
+  });
+
+  if (problems.length > 0) {
+    throw new Error("questions.json est invalide :\n- " + problems.join("\n- "));
+  }
+}
+
+checkCategories(allCategories);
 
 const PORT = process.env.PORT || 3000;
 const NUMBER_OF_ROUNDS = 8;
@@ -85,6 +128,17 @@ function isNameTaken(room, name) {
   return usedByPlayer || usedByExtra;
 }
 
+// Toutes les questions des catégories activées dans la salle
+function getQuestionPool(room) {
+  const pool = [];
+  for (const category of allCategories) {
+    if (room.enabledCategoryIds.includes(category.id)) {
+      pool.push(...category.questions);
+    }
+  }
+  return pool;
+}
+
 function isCandidate(room, id) {
   return room.candidates.some((candidate) => candidate.id === id);
 }
@@ -99,6 +153,7 @@ function createRoom() {
     hostId: null,
     players: new Map(), // playerId -> { id, name, socketId, connected, score }
     phase: "lobby", // lobby | voting | results | final
+    enabledCategoryIds: allCategories.map((category) => category.id), // toutes actives au départ
     extraNames: [], // noms ajoutés par l'hôte, proposés en réponse sans être des joueurs : { id, name }
     candidates: [], // la liste des réponses possibles, fixée au lancement : { id, name }
     questions: [],
@@ -174,6 +229,13 @@ function buildStateForPlayer(room, playerId) {
     youId: playerId,
     hostId: room.hostId,
     players: players,
+    categories: allCategories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      questionCount: category.questions.length,
+      enabled: room.enabledCategoryIds.includes(category.id),
+    })),
+    maxRounds: NUMBER_OF_ROUNDS,
     extraNames: room.extraNames,
     maxExtraNames: MAX_EXTRA_NAMES,
     candidates: room.candidates,
@@ -203,7 +265,7 @@ function startGame(room) {
   const connectedPlayers = getConnectedPlayers(room);
   const playerCandidates = connectedPlayers.map((player) => ({ id: player.id, name: player.name }));
   room.candidates = [...playerCandidates, ...room.extraNames];
-  room.questions = shuffle(allQuestions).slice(0, NUMBER_OF_ROUNDS);
+  room.questions = shuffle(getQuestionPool(room)).slice(0, NUMBER_OF_ROUNDS);
   room.roundIndex = 0;
   for (const player of room.players.values()) {
     player.score = 0;
@@ -318,7 +380,27 @@ io.on("connection", (socket) => {
     if (!currentRoom || currentPlayerId !== currentRoom.hostId) return;
     if (currentRoom.phase !== "lobby") return;
     if (getConnectedPlayers(currentRoom).length < MIN_PLAYERS) return;
+    if (getQuestionPool(currentRoom).length === 0) return;
     startGame(currentRoom);
+    broadcastState(currentRoom);
+  });
+
+  socket.on("category:toggle", (data) => {
+    if (!currentRoom || currentPlayerId !== currentRoom.hostId) return;
+    if (currentRoom.phase !== "lobby") return;
+
+    const categoryId = data && data.id;
+    const categoryExists = allCategories.some((category) => category.id === categoryId);
+    if (!categoryExists) return;
+
+    const isEnabled = currentRoom.enabledCategoryIds.includes(categoryId);
+    if (isEnabled) {
+      currentRoom.enabledCategoryIds = currentRoom.enabledCategoryIds.filter(
+        (id) => id !== categoryId
+      );
+    } else {
+      currentRoom.enabledCategoryIds.push(categoryId);
+    }
     broadcastState(currentRoom);
   });
 
